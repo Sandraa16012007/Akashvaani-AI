@@ -11,7 +11,7 @@ import farmerImg from '../assets/farmer.jpg';
 import studentsImg from '../assets/students.png';
 import youthImg from '../assets/youth.jpg';
 import oldImg from '../assets/old.jpg';
-import heroImg from '../assets/hero.png';
+
 
 const MarqueeColumn = ({ items, reverse = false, duration = 40, isHovered }) => {
   const duplicatedItems = [...items, ...items, ...items]; // Triple for smooth loop
