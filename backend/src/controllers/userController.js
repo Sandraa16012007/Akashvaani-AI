@@ -2,10 +2,10 @@ const { supabase } = require('../config/supabaseClient');
 
 const createUser = async (req, res) => {
   try {
-    const { name, age, occupation, income, state, education } = req.body;
+    const { name, email, age, occupation, income, state, district, education } = req.body;
     
     // Validate required fields
-    if (!name || age === undefined || !occupation || income === undefined || !state || !education) {
+    if (!name || !email || age === undefined || !occupation || income === undefined || !state || !district || !education) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 

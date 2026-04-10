@@ -9,28 +9,43 @@ import ProfilePage from './pages/ProfilePage';
 import ApplicationsPage from './pages/ApplicationsPage';
 import DocumentsPage from './pages/DocumentsPage';
 import VoiceAssistantPage from './pages/VoiceAssistantPage';
-import { CitizenProvider } from './context/CitizenContext';
+import { useCitizen, CitizenProvider } from './context/CitizenContext';
+import { Navigate } from 'react-router-dom';
+
+
+const AppRoutes = () => {
+  const { citizenData } = useCitizen();
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/schemes" element={<SchemesPage />} />
+      <Route 
+        path="/dashboard" 
+        element={citizenData ? <DashboardLayout /> : <Navigate to="/" />}
+      >
+        <Route index element={<DashboardHome />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="schemes" element={<SchemesPage />} />
+        <Route path="applications" element={<ApplicationsPage />} />
+        <Route path="documents" element={<DocumentsPage />} />
+        <Route path="voice-assistant" element={<VoiceAssistantPage />} />
+      </Route>
+    </Routes>
+  );
+};
 
 function App() {
   return (
     <CitizenProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/schemes" element={<SchemesPage />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<DashboardHome />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="schemes" element={<SchemesPage />} />
-            <Route path="applications" element={<ApplicationsPage />} />
-            <Route path="documents" element={<DocumentsPage />} />
-            <Route path="voice-assistant" element={<VoiceAssistantPage />} />
-          </Route>
-        </Routes>
+        <AppRoutes />
       </Router>
     </CitizenProvider>
   );
 }
+
+
 
 export default App;

@@ -21,5 +21,8 @@ export const createApplication = (applicationData) => handleRequest(() => api.po
 export const runDemo = () => handleRequest(() => api.get('/demo-citizen'));
 export const getReasoning = (userId) => handleRequest(() => api.get(`/agents/reasoning/${userId}`));
 export const getUserByEmail = (email) => handleRequest(() => api.get(`/users/email/${email}`));
+export const updateUser = (userId, userData) => handleRequest(() => api.put(`/users/${userId}`, userData));
+export const getApplicationsByUser = (userId) => handleRequest(() => api.get(`/applications/${userId}`));
+
 
 export default api;

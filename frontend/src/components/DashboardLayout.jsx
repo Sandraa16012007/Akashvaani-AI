@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Target, 
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../assets/logo.png';
+import { useCitizen } from '../context/CitizenContext';
 
 const SidebarLink = ({ to, icon: Icon, label, external }) => {
   if (external) {
@@ -54,8 +55,16 @@ const SidebarLink = ({ to, icon: Icon, label, external }) => {
   );
 };
 
-const DashboardLayout = ({ userProfile, onLogout }) => {
+const DashboardLayout = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { citizenData, clearCitizen } = useCitizen();
+  const navigate = useNavigate();
+  const userProfile = citizenData?.profile;
+
+  const handleLogout = () => {
+    clearCitizen();
+    navigate('/');
+  };
 
   const navLinks = [
     { to: "/dashboard", icon: Home, label: "Dashboard" },
@@ -169,7 +178,7 @@ const DashboardLayout = ({ userProfile, onLogout }) => {
                     </Link>
                     <div className="my-1 border-t border-slate-100"></div>
                     <button 
-                      onClick={onLogout}
+                      onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium"
                     >
                       <LogOut className="w-4 h-4 text-red-500" />
