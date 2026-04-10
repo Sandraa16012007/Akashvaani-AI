@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCitizen } from '../context/CitizenContext';
-import { topSchemes, documentStatus, applicationSnapshot } from '../data/mockData';
+import { topSchemes, applicationSnapshot } from '../data/mockData';
 import { useSchemes } from '../hooks/useSchemes';
 import { getApplicationsByUser } from '../services/api';
 
@@ -207,6 +207,23 @@ const AgentActivity = () => {
 
 const DocumentSnapshot = () => {
   const navigate = useNavigate();
+  const { userDocuments, citizenData } = useCitizen();
+  const profile = citizenData?.profile || {};
+
+  // Show a few important documents, prioritizing missing ones if they are base requirements
+  const baseDocuments = [
+    { id: 'aadhaar', name: 'Aadhaar Card', field: 'aadhaar_card', status: 'missing', message: 'Missing' },
+    { id: 'income', name: 'Income Certificate', field: 'income_certificate', status: 'missing', message: 'Missing' }
+  ];
+
+  const allDocs = baseDocuments.map(baseDoc => {
+    const uploaded = userDocuments.find(ud => ud.type === baseDoc.name || ud.name === baseDoc.name);
+    const dbVerified = profile[baseDoc.field] === true;
+
+    if (uploaded || dbVerified) return { ...baseDoc, status: 'verified', message: 'Verified' };
+    return baseDoc;
+  });
+
   return (
      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
        <div className="flex justify-between items-center mb-6">
@@ -216,8 +233,8 @@ const DocumentSnapshot = () => {
        <p className="text-xs text-slate-500 mb-4 tracking-wide">Complete your profile to unlock more schemes.</p>
        
        <div className="space-y-3">
-         {documentStatus.slice(0,3).map(doc => (
-           <div key={doc.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+         {allDocs.map((doc, idx) => (
+           <div key={doc.id || idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
              <div className="flex items-center gap-3">
                {doc.status === 'verified' ? (
                  <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -227,7 +244,7 @@ const DocumentSnapshot = () => {
                <span className="font-semibold text-slate-700 text-sm">{doc.name}</span>
              </div>
              <span className={`text-xs font-bold px-2 py-1 rounded-md ${doc.status === 'verified' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-               {doc.message}
+               {doc.message || 'Missing'}
              </span>
            </div>
          ))}

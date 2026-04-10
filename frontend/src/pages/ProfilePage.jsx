@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useCitizen } from '../context/CitizenContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Calendar, MapPin, Briefcase, GraduationCap, DollarSign, ShieldCheck, Edit3, X, Save, Loader2 } from 'lucide-react';
-import { updateUser } from '../services/api';
+import { User, Mail, Calendar, MapPin, Briefcase, GraduationCap, DollarSign, ShieldCheck, Edit3, X, Save, Loader2, Sparkles } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { updateUser, createUser } from '../services/api';
+
 
 const ProfileField = ({ icon: Icon, label, value, isEditing, onChange, name, type = "text" }) => (
   <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-blue-100">
@@ -27,9 +29,13 @@ const ProfileField = ({ icon: Icon, label, value, isEditing, onChange, name, typ
 );
 
 const ProfilePage = () => {
-  const { citizenData, updateCitizen } = useCitizen();
+  const { citizenData, updateCitizen, setCitizen } = useCitizen();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isVerifyMode = new URLSearchParams(location.search).get('verify') === 'true' || citizenData?.isTemp;
+  
   const profile = citizenData?.profile;
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(isVerifyMode);
   const [formData, setFormData] = useState(profile || {});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -52,18 +58,30 @@ const ProfilePage = () => {
   };
 
   const handleSave = async () => {
-    if (citizenData.isDemo) {
-      updateCitizen(formData);
-      setIsEditing(false);
-      return;
-    }
-
     setIsSaving(true);
     setError('');
     try {
-      await updateUser(profile.id, formData);
-      updateCitizen(formData);
-      setIsEditing(false);
+      if (citizenData.isDemo) {
+        updateCitizen(formData);
+        setIsEditing(false);
+        return;
+      }
+
+      if (citizenData.isTemp) {
+        // First time saving after AI extraction
+        const response = await createUser({
+          ...formData,
+          age: parseInt(formData.age),
+          income: parseInt(String(formData.income).replace(/[^\d]/g, '')) || 0
+        });
+        setCitizen(response); // This removes isTemp
+        navigate('/dashboard');
+      } else {
+        // Regular update
+        await updateUser(profile.id, formData);
+        updateCitizen(formData);
+        setIsEditing(false);
+      }
     } catch (err) {
       setError(err.message || 'Failed to update profile');
     } finally {
@@ -77,9 +95,27 @@ const ProfilePage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-4xl mx-auto space-y-8 pb-10"
     >
+      {isVerifyMode && (
+         <motion.div 
+           initial={{ height: 0, opacity: 0 }}
+           animate={{ height: 'auto', opacity: 1 }}
+           className="bg-indian-saffron/10 border border-indian-saffron/20 p-4 rounded-2xl flex items-center gap-4"
+         >
+           <div className="w-10 h-10 bg-indian-saffron rounded-full flex items-center justify-center text-white shrink-0">
+             <Sparkles className="w-5 h-5" />
+           </div>
+           <div>
+             <h4 className="font-bold text-indian-navy">Verify Extracted Details</h4>
+             <p className="text-sm text-slate-600">Our AI has extracted your details from the document. Please check and correct any field if needed before saving.</p>
+           </div>
+         </motion.div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Citizen Profile</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            {isVerifyMode ? 'Verify Profile' : 'Citizen Profile'}
+          </h1>
           <p className="text-slate-500 mt-1">Manage and view your identity and professional details.</p>
         </div>
         <div className="flex gap-3">
@@ -99,16 +135,18 @@ const ProfilePage = () => {
               </motion.button>
             ) : (
               <div className="flex gap-2">
-                <motion.button
-                  key="cancel"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  onClick={() => { setIsEditing(false); setFormData(profile); }}
-                  className="px-4 py-2 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  Cancel
-                </motion.button>
+                {!isVerifyMode && (
+                  <motion.button
+                    key="cancel"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={() => { setIsEditing(false); setFormData(profile); }}
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </motion.button>
+                )}
                 <motion.button
                   key="save"
                   initial={{ opacity: 0, x: -20 }}
@@ -118,7 +156,7 @@ const ProfilePage = () => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-70"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save Changes
+                  {citizenData.isTemp ? 'Confirm & Finish' : 'Save Changes'}
                 </motion.button>
               </div>
             )}
@@ -128,7 +166,7 @@ const ProfilePage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ProfileField icon={User} label="Full Name" name="name" value={formData.name} isEditing={isEditing} onChange={handleChange} />
-        <ProfileField icon={Mail} label="Email Address" name="email" value={formData.email} isEditing={false} />
+        <ProfileField icon={Mail} label="Email Address" name="email" value={formData.email} isEditing={isEditing} onChange={handleChange} />
         <ProfileField icon={Calendar} label="Age" name="age" type="number" value={formData.age} isEditing={isEditing} onChange={handleChange} />
         <ProfileField icon={MapPin} label="State / Location" name="state" value={formData.state} isEditing={isEditing} onChange={handleChange} />
         <ProfileField icon={Briefcase} label="Occupation" name="occupation" value={formData.occupation} isEditing={isEditing} onChange={handleChange} />
@@ -155,6 +193,7 @@ const ProfilePage = () => {
     </motion.div>
   );
 };
+
 
 export default ProfilePage;
 

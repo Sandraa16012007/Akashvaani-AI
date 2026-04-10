@@ -8,18 +8,36 @@ export const CitizenProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const setCitizen = (userData) => {
+  const [userDocuments, setUserDocuments] = useState(() => {
+    const saved = localStorage.getItem('userDocuments');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    if (citizenData) {
+      localStorage.setItem('citizenData', JSON.stringify(citizenData));
+    } else {
+      localStorage.removeItem('citizenData');
+    }
+  }, [citizenData]);
+
+  useEffect(() => {
+    localStorage.setItem('userDocuments', JSON.stringify(userDocuments));
+  }, [userDocuments]);
+
+  const setCitizen = (userData, extraFlags = {}) => {
     // Detect if this is the demo user
     const isDemo = userData.email === 'user@gmail.com';
     const data = { 
       profile: userData, 
       eligibleSchemes: userData.eligibleSchemes || [], 
       totalBenefits: userData.totalBenefits || "₹0", 
-      isDemo 
+      isDemo,
+      ...extraFlags
     };
     setCitizenData(data);
-    localStorage.setItem('citizenData', JSON.stringify(data));
   };
+
 
   const loadDemoCitizen = (profile, eligibleSchemes, totalBenefits) => {
     const data = { 
@@ -29,25 +47,35 @@ export const CitizenProvider = ({ children }) => {
       isDemo: true 
     };
     setCitizenData(data);
-    localStorage.setItem('citizenData', JSON.stringify(data));
   };
 
-
+  const addDocument = (doc) => {
+    setUserDocuments(prev => [...prev, { ...doc, id: Date.now() }]);
+  };
 
   const updateCitizen = (updates) => {
     const data = { ...citizenData, profile: { ...citizenData.profile, ...updates } };
     setCitizenData(data);
-    localStorage.setItem('citizenData', JSON.stringify(data));
   };
 
   const clearCitizen = () => {
     setCitizenData(null);
+    setUserDocuments([]);
     localStorage.removeItem('citizenData');
+    localStorage.removeItem('userDocuments');
   };
 
   return (
-    <CitizenContext.Provider value={{ citizenData, setCitizen, updateCitizen, loadDemoCitizen, clearCitizen }}>
-
+    <CitizenContext.Provider value={{ 
+      citizenData, 
+      setCitizen, 
+      updateCitizen, 
+      loadDemoCitizen, 
+      clearCitizen,
+      userDocuments,
+      addDocument,
+      setUserDocuments
+    }}>
       {children}
     </CitizenContext.Provider>
   );

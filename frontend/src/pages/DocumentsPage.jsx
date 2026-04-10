@@ -1,40 +1,120 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { UploadCloud, CheckCircle2, AlertCircle, File, Plus } from 'lucide-react';
-import { documentStatus } from '../data/mockData';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UploadCloud, CheckCircle2, AlertCircle, File, Loader2, ExternalLink } from 'lucide-react';
+import { useCitizen } from '../context/CitizenContext';
+import { extractProfile } from '../services/aiApi';
 
 const DocumentCard = ({ doc }) => {
+  const { addDocument, citizenData, updateCitizen } = useCitizen();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
   const isVerified = doc.status === 'verified';
   const isMissing = doc.status === 'missing';
   
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // 1. OCR Extraction
+      const extractedData = await extractProfile(file, citizenData?.profile?.id, doc.name);
+      
+      // 2. Add to vault
+      addDocument({
+        name: doc.name,
+        status: 'verified',
+        type: doc.name,
+        date: new Date().toLocaleDateString(),
+        url: extractedData.file_url || URL.createObjectURL(file) // Use permanent URL if available
+      });
+
+      // 3. Update global profile if new data found
+      const profileUpdates = {
+        name: extractedData.name !== 'Unknown' ? extractedData.name : undefined,
+        age: extractedData.age,
+        gender: extractedData.gender,
+        state: extractedData.state,
+        district: extractedData.district,
+        occupation: extractedData.occupation,
+        income: extractedData.annual_income,
+        education: extractedData.education,
+        email: extractedData.email
+      };
+      
+      // Filter out undefined/null
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(profileUpdates).filter(([_, v]) => v != null)
+      );
+      
+      if (Object.keys(cleanUpdates).length > 0) {
+        updateCitizen(cleanUpdates);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to process document. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <div className={`p-6 rounded-3xl border ${isVerified ? 'border-green-100 bg-green-50/30' : isMissing ? 'border-red-100 bg-red-50/30' : 'border-slate-200 bg-white'} shadow-sm flex flex-col justify-between h-full group hover:shadow-md transition-all`}>
+    <div className={`p-6 rounded-3xl border ${isVerified ? 'border-green-100 bg-green-50/30' : isMissing ? 'border-red-100 bg-red-50/30' : 'border-slate-200 bg-white'} shadow-sm flex flex-col justify-between h-full group hover:shadow-md transition-all relative overflow-hidden`}>
+      <AnimatePresence>
+        {isUploading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center"
+          >
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+            <p className="text-xs font-bold text-blue-900 uppercase tracking-widest">AI Scanning...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center justify-between mb-4">
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isVerified ? 'bg-green-100 text-green-600' : isMissing ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
           <File className="w-6 h-6" />
         </div>
         <div>
           {isVerified && <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle2 className="w-3.5 h-3.5" /> Verified</span>}
-          {isMissing && <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-bold"><AlertCircle className="w-3.5 h-3.5" /> Required</span>}
-          {doc.status === 'pending' && <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-bold">Pending Setup</span>}
+          {isMissing && <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-bold"><AlertCircle className="w-3.5 h-3.5" /> Missing</span>}
         </div>
       </div>
       
       <div className="mb-6">
         <h3 className="font-bold text-slate-800 text-lg mb-1">{doc.name}</h3>
         <p className="text-sm text-slate-500">
-          {isVerified ? 'Automatically verified via DigiLocker or manual upload.' : 'Required for most scholarship schemes.'}
+          {isVerified ? `Automatically verified on ${doc.date || 'unknown date'}.` : `Required for scheme eligibility verification.`}
         </p>
       </div>
       
-      {!isVerified && (
-        <button className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors group-hover:bg-white">
+      <input 
+        type="file" 
+        className="hidden" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        accept="image/*,.pdf"
+      />
+
+      {!isVerified ? (
+        <button 
+          onClick={() => fileInputRef.current.click()}
+          className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold text-sm flex items-center justify-center gap-2 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors group-hover:bg-white"
+        >
           <UploadCloud className="w-4 h-4" />
-          Upload Document
+          Upload & Verify
         </button>
-      )}
-      {isVerified && (
-         <button className="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+      ) : (
+         <button 
+           onClick={() => doc.url && window.open(doc.url, '_blank')}
+           className="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+         >
+          <ExternalLink className="w-4 h-4" />
           View Document
         </button>
       )}
@@ -43,6 +123,35 @@ const DocumentCard = ({ doc }) => {
 };
 
 const DocumentsPage = () => {
+  const { userDocuments, citizenData } = useCitizen();
+  const profile = citizenData?.profile || {};
+
+  const docTypeToField = {
+    'Aadhaar Card': 'aadhaar_card',
+    'PAN Card': 'pan_card',
+    'Passport': 'passport',
+    'Voter ID': 'voter_id',
+    'Driving License': 'driving_license',
+    'Ration Card': 'ration_card',
+    'Birth Certificate': 'birth_certificate',
+    'Death Certificate': 'death_certificate',
+    'Marriage Certificate': 'marriage_certificate',
+    'Caste Status Certificate': 'caste_status_certificate',
+    'Income Certificate': 'income_certificate'
+  };
+
+  const allDocTypes = Object.keys(docTypeToField);
+
+  // Map all document types to their current status
+  const allDocs = allDocTypes.map(typeName => {
+    const uploaded = userDocuments.find(ud => ud.type === typeName || ud.name === typeName);
+    const dbVerified = profile[docTypeToField[typeName]] === true;
+
+    if (uploaded) return { ...uploaded, status: 'verified' };
+    if (dbVerified) return { name: typeName, status: 'verified', date: 'verified in profile' };
+    return { name: typeName, status: 'missing' };
+  });
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -50,24 +159,17 @@ const DocumentsPage = () => {
       transition={{ duration: 0.4 }}
       className="max-w-7xl mx-auto pb-10 space-y-8"
     >
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-indian-navy to-blue-900 rounded-3xl p-8 text-white shadow-xl shadow-indian-navy/20">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">Digital Document Vault</h1>
-          <p className="text-blue-100 text-lg max-w-xl">Upload once. Apply anywhere. Your AI assistant securely uses these to pre-fill eligibility forms.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Citizen Document Vault</h1>
+          <p className="text-slate-500 mt-1">Upload and manage your documents. AI will extract and verify details automatically.</p>
         </div>
-        <button className="whitespace-nowrap px-6 py-4 bg-white text-indian-navy hover:bg-blue-50 hover:scale-[1.02] active:scale-[0.98] rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg">
-          <Plus className="w-5 h-5" />
-          Upload New Document
-        </button>
       </div>
 
-      <div className="mt-8">
-         <h2 className="text-xl font-bold text-indian-navy mb-6">Your Profile Documents</h2>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-           {documentStatus.map(doc => (
-             <DocumentCard key={doc.id} doc={doc} />
-           ))}
-         </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {allDocs.map((doc, idx) => (
+          <DocumentCard key={idx} doc={doc} />
+        ))}
       </div>
     </motion.div>
   );

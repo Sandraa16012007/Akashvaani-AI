@@ -5,7 +5,7 @@ router = APIRouter(prefix="/ai", tags=["Extraction"])
 
 
 @router.post("/extract-profile")
-async def extract_profile(file: UploadFile = File(...)):
+async def extract_profile(user_id: str = None, doc_type: str = None, file: UploadFile = File(...)):
     """
     Endpoint to upload a document and extract structured citizen profile data.
     """
@@ -18,7 +18,9 @@ async def extract_profile(file: UploadFile = File(...)):
         extracted_profile = await process_profile_extraction(
             file_bytes=file_bytes,
             filename=filename,
-            content_type=content_type
+            content_type=content_type,
+            user_id=user_id,
+            doc_type=doc_type
         )
         
         return extracted_profile
