@@ -6,4 +6,5 @@ python-multipart
 pytesseract
 pdfplumber
 Pillow
-
+openai-whisper
+google-generativeai

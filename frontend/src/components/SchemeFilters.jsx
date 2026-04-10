@@ -14,7 +14,7 @@ const docTypeToField = {
   'Income Certificate': 'income_certificate'
 };
 
-const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile }) => {
+const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile, search = '' }) => {
   const [incomeRange, setIncomeRange] = useState('');
   const [selectedDocs, setSelectedDocs] = useState([]);
   const [genderFilter, setGenderFilter] = useState('');
@@ -135,8 +135,20 @@ const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile }) => {
       });
     }
 
+    // 6. Search/Keyword filtering
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(scheme => {
+        return (
+          scheme.name?.toLowerCase().includes(s) ||
+          scheme.description?.toLowerCase().includes(s) ||
+          scheme.category?.toLowerCase().includes(s)
+        );
+      });
+    }
+
     setFilteredSchemes(result);
-  }, [schemes, incomeRange, selectedDocs, genderFilter, setFilteredSchemes, userProfile]);
+  }, [schemes, incomeRange, selectedDocs, genderFilter, setFilteredSchemes, userProfile, search]);
 
   const toggleDoc = (doc) => {
     if (selectedDocs.includes(doc)) {

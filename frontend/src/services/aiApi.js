@@ -46,3 +46,18 @@ export const fetchDocumentUrl = (userId, docType) => {
 export const analyzeEligibility = (profile) => {
   return handleRequest(() => aiApi.post('/ai/analyze-eligibility', profile));
 };
+
+export const sendVoiceQuery = (audioBlob, browserText = null) => {
+  const formData = new FormData();
+  formData.append('audio', audioBlob, 'recording.webm');
+  if (browserText) {
+    formData.append('browser_text', browserText);
+  }
+  return handleRequest(() => aiApi.post('/ai/voice-query', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }));
+};
+
+export const sendTextQuery = (text, language = 'en') => {
+  return handleRequest(() => aiApi.post('/ai/text-query', { text, language }));
+};

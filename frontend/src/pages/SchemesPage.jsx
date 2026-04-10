@@ -10,7 +10,10 @@ import { getUserById } from '../services/api';
 import { Loader2 } from 'lucide-react';
 
 const SchemesPage = () => {
-  const { pathname } = useLocation();
+  const { pathname, search: urlSearch } = useLocation();
+  const searchParams = new URLSearchParams(urlSearch);
+  const searchTerm = searchParams.get('search') || '';
+  
   const isDashboard = pathname.startsWith('/dashboard');
   const { citizenData, updateCitizen } = useCitizen();
   const currentProfile = citizenData?.profile || null;
@@ -111,7 +114,7 @@ const SchemesPage = () => {
           )}
 
           <div className="space-y-8">
-            <SchemeFilters key={filterKey} schemes={schemes} setFilteredSchemes={setFilteredSchemes} userProfile={freshProfile} />
+            <SchemeFilters key={filterKey} schemes={schemes} setFilteredSchemes={setFilteredSchemes} userProfile={freshProfile} search={searchTerm} />
 
             {schemesLoading && (
               <div className="flex flex-col justify-center items-center py-32 space-y-6">
