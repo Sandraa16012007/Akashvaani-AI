@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { useCitizen } from '../context/CitizenContext';
 
 const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [lang, setLang] = useState('English');
   const [showLang, setShowLang] = useState(false);
+  const { citizenData } = useCitizen();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,7 +22,7 @@ const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
 
   const menuItems = [
     { name: 'Home', href: '/' },
-    { name: 'About', href: '/#about' },
+    { name: 'About', href: '/about' },
     { name: 'Schemes', href: '/schemes' },
   ];
 
@@ -35,9 +38,9 @@ const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
         isScrolled ? 'glass-card rounded-full py-2 shadow-2xl border-white/40 backdrop-blur-xl' : ''
       }`}>
         {/* Logo */}
-        <div className="flex items-center gap-3 cursor-pointer group">
+        <Link to="/" className="flex items-center gap-3 cursor-pointer group">
           <img src={logo} alt="Akashvaani AI" className="h-10 w-auto transition-transform group-hover:scale-110" />
-        </div>
+        </Link>
 
         {/* Menu */}
         <div className="hidden lg:flex items-center gap-10">
@@ -89,29 +92,43 @@ const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
             </AnimatePresence>
           </div>
 
-          <button 
-            onClick={onDemoLogin}
-            className="hidden xl:block text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-4 py-2 rounded-full transition-colors"
-          >
-            Try Demo User
-          </button>
-          
-          <button 
-            onClick={onLoginClick}
-            className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors ml-2"
-          >
-            Login
-          </button>
-          
-          <button 
-            onClick={onGetStartedClick}
-            className="btn-primary !py-2.5 !px-6 text-sm flex items-center gap-2 group"
-          >
-            Get Started
-            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1">
-              <ChevronDown className="-rotate-90 w-3 h-3" />
-            </div>
-          </button>
+          {citizenData ? (
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="btn-primary !py-2.5 !px-6 text-sm flex items-center gap-2 group"
+            >
+              Go to Dashboard
+              <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1">
+                <ChevronDown className="-rotate-90 w-3 h-3" />
+              </div>
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={onDemoLogin}
+                className="hidden xl:block text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-4 py-2 rounded-full transition-colors"
+              >
+                Try Demo User
+              </button>
+              
+              <button 
+                onClick={onLoginClick}
+                className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors ml-2"
+              >
+                Login
+              </button>
+              
+              <button 
+                onClick={onGetStartedClick}
+                className="btn-primary !py-2.5 !px-6 text-sm flex items-center gap-2 group"
+              >
+                Get Started
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1">
+                  <ChevronDown className="-rotate-90 w-3 h-3" />
+                </div>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </motion.nav>

@@ -15,9 +15,24 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCitizen } from '../context/CitizenContext';
-import { topSchemes, documentStatus, applicationSnapshot } from '../data/mockData';
+import { topSchemes, applicationSnapshot } from '../data/mockData';
+import { useSchemes } from '../hooks/useSchemes';
+import { getApplicationsByUser } from '../services/api';
 
-const BenefitSummaryCard = () => {
+
+const evaluateEligibility = (scheme, profile) => {
+  if (!profile) return false;
+  const rules = scheme.eligibility_rules;
+  if (!rules) return true;
+
+  let matches = true;
+  if (rules.income_max && profile.income > rules.income_max) matches = false;
+  if (rules.student !== undefined && rules.student && profile.occupation?.toLowerCase() !== 'student') matches = false;
+  // Add other basic rules if needed
+  return matches;
+};
+
+const BenefitSummaryCard = ({ totalBenefits, schemeCount }) => {
   const navigate = useNavigate();
   return (
     <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-600/20">
@@ -31,12 +46,12 @@ const BenefitSummaryCard = () => {
             <Sparkles className="w-4 h-4 text-blue-200" />
             <span className="text-blue-50">Profile Analysis Complete</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">₹1,45,000</h2>
+          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">{totalBenefits}</h2>
           <p className="text-blue-100 font-medium text-lg flex items-center gap-2">
-            Available across <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-md">3 schemes</span> matched
+            Available across <span className="font-bold text-white bg-white/20 px-2 py-0.5 rounded-md">{schemeCount} schemes</span> matched
           </p>
           <p className="text-sm text-blue-200 mt-4 max-w-sm">
-            "These are benefits you are most likely eligible for right now based on your profile."
+            These are benefits you are most likely eligible for right now based on your profile.
           </p>
         </div>
         
@@ -78,8 +93,11 @@ const QuickActions = () => {
   );
 };
 
-const TopSchemesPreview = () => {
+const TopSchemesPreview = ({ schemes: displaySchemes, isDemo }) => {
   const navigate = useNavigate();
+  // If no schemes provided and not demo, show empty or message instead of mock data
+  const schemesToShow = displaySchemes && displaySchemes.length > 0 ? displaySchemes.slice(0, 3) : (isDemo ? topSchemes : []);
+
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full">
       <div className="flex justify-between items-center mb-6">
@@ -87,7 +105,7 @@ const TopSchemesPreview = () => {
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             Top Scheme Matches
           </h3>
-          <p className="text-sm text-slate-500 mt-1">"Top matches based on your current profile."</p>
+          <p className="text-sm text-slate-500 mt-1">Top matches based on your current profile.</p>
         </div>
         <button 
           onClick={() => navigate('/dashboard/schemes')}
@@ -99,25 +117,32 @@ const TopSchemesPreview = () => {
       </div>
 
       <div className="space-y-4 flex-1">
-        {topSchemes.map(scheme => (
-          <div key={scheme.id} className="p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group cursor-pointer">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors">{scheme.name}</h4>
-              <span className="font-bold text-green-600 text-sm bg-green-50 px-2.5 py-1 rounded-lg border border-green-100/50">
-                {scheme.benefit}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" 
-                  style={{ width: `${scheme.score}%` }}
-                ></div>
+        {schemesToShow.length > 0 ? (
+          schemesToShow.map((scheme, idx) => (
+            <div key={scheme.id || idx} className="p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group cursor-pointer">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors">{scheme.name}</h4>
+                <span className="font-bold text-green-600 text-sm bg-green-50 px-2.5 py-1 rounded-lg border border-green-100/50">
+                  {scheme.benefit}
+                </span>
               </div>
-              <span className="text-xs font-bold text-slate-500">{scheme.score}% Match</span>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" 
+                    style={{ width: `${scheme.score || 85}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-bold text-slate-500">{scheme.score || 85}% Match</span>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+             <AlertCircle className="w-10 h-10 text-slate-300 mb-3" />
+             <p className="text-sm font-medium text-slate-500">No specific matches yet. Complete your profile for better results.</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -142,7 +167,7 @@ const AgentActivity = () => {
            <Layers className="w-5 h-5 text-blue-400" />
            Agent Activity
          </h3>
-         <p className="text-sm text-slate-400 mt-1">"Your AI assistant is working in the background to optimize your benefits."</p>
+         <p className="text-sm text-slate-400 mt-1">Your AI assistant is working in the background to optimize your benefits.</p>
        </div>
 
        <div className="space-y-6 relative z-10 flex-1">
@@ -182,17 +207,34 @@ const AgentActivity = () => {
 
 const DocumentSnapshot = () => {
   const navigate = useNavigate();
+  const { userDocuments, citizenData } = useCitizen();
+  const profile = citizenData?.profile || {};
+
+  // Show a few important documents, prioritizing missing ones if they are base requirements
+  const baseDocuments = [
+    { id: 'aadhaar', name: 'Aadhaar Card', field: 'aadhaar_card', status: 'missing', message: 'Missing' },
+    { id: 'income', name: 'Income Certificate', field: 'income_certificate', status: 'missing', message: 'Missing' }
+  ];
+
+  const allDocs = baseDocuments.map(baseDoc => {
+    const uploaded = userDocuments.find(ud => ud.type === baseDoc.name || ud.name === baseDoc.name);
+    const dbVerified = profile[baseDoc.field] === true;
+
+    if (uploaded || dbVerified) return { ...baseDoc, status: 'verified', message: 'Verified' };
+    return baseDoc;
+  });
+
   return (
      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
        <div className="flex justify-between items-center mb-6">
          <h3 className="text-lg font-bold text-slate-800">Document Status</h3>
          <button onClick={() => navigate('/dashboard/documents')} className="text-sm text-blue-600 font-semibold hover:underline">Manage</button>
        </div>
-       <p className="text-xs text-slate-500 mb-4 tracking-wide">"Complete your profile to unlock more schemes."</p>
+       <p className="text-xs text-slate-500 mb-4 tracking-wide">Complete your profile to unlock more schemes.</p>
        
        <div className="space-y-3">
-         {documentStatus.slice(0,3).map(doc => (
-           <div key={doc.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+         {allDocs.map((doc, idx) => (
+           <div key={doc.id || idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
              <div className="flex items-center gap-3">
                {doc.status === 'verified' ? (
                  <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -202,7 +244,7 @@ const DocumentSnapshot = () => {
                <span className="font-semibold text-slate-700 text-sm">{doc.name}</span>
              </div>
              <span className={`text-xs font-bold px-2 py-1 rounded-md ${doc.status === 'verified' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-               {doc.message}
+               {doc.message || 'Missing'}
              </span>
            </div>
          ))}
@@ -211,8 +253,13 @@ const DocumentSnapshot = () => {
   );
 };
 
-const ApplicationSnapshot = () => {
+const ApplicationSnapshot = ({ applications = [] }) => {
   const navigate = useNavigate();
+  const safeApplications = Array.isArray(applications) ? applications : [];
+  const pendingCount = safeApplications.filter(a => a.status === 'pending').length;
+  const approvedCount = safeApplications.filter(a => a.status === 'approved').length;
+
+
   return (
      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
        <div>
@@ -220,15 +267,15 @@ const ApplicationSnapshot = () => {
           <h3 className="text-lg font-bold text-slate-800">Applications</h3>
           <button onClick={() => navigate('/dashboard/applications')} className="text-sm text-blue-600 font-semibold hover:underline">View All</button>
         </div>
-        <p className="text-xs text-slate-500 mb-4 tracking-wide">"Track your applications and stay updated on their progress."</p>
+        <p className="text-xs text-slate-500 mb-4 tracking-wide">Track your applications and stay updated on their progress.</p>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
-            <span className="block text-2xl font-bold text-orange-600">1</span>
+            <span className="block text-2xl font-bold text-orange-600">{pendingCount}</span>
             <span className="text-xs font-semibold text-orange-800 uppercase tracking-wider">Pending</span>
           </div>
           <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-            <span className="block text-2xl font-bold text-green-600">1</span>
+            <span className="block text-2xl font-bold text-green-600">{approvedCount}</span>
             <span className="text-xs font-semibold text-green-800 uppercase tracking-wider">Approved</span>
           </div>
         </div>
@@ -245,7 +292,27 @@ const ApplicationSnapshot = () => {
 
 const DashboardHome = () => {
   const { citizenData } = useCitizen();
+  const { schemes } = useSchemes();
+  const [applications, setApplications] = useState([]);
   const userProfile = citizenData?.profile || null;
+
+  useEffect(() => {
+    if (userProfile?.id && !citizenData.isDemo) {
+      getApplicationsByUser(userProfile.id).then(setApplications).catch(console.error);
+    }
+  }, [userProfile?.id, citizenData.isDemo]);
+
+  // Real-time eligibility logic
+  const eligibleSchemes = citizenData?.isDemo 
+    ? citizenData.eligibleSchemes 
+    : schemes.filter(s => evaluateEligibility(s, userProfile));
+
+  const totalBenefitAmount = citizenData?.isDemo
+    ? citizenData.totalBenefits
+    : `₹${eligibleSchemes.reduce((acc, curr) => {
+        const numStr = String(curr.benefit).replace(/[^0-9]/g, '');
+        return acc + (parseInt(numStr, 10) || 0);
+      }, 0).toLocaleString('en-IN')}`;
   
   return (
     <motion.div 
@@ -260,14 +327,16 @@ const DashboardHome = () => {
           Welcome back, {userProfile?.name ? userProfile.name.split(' ')[0] : 'Citizen'}
         </h1>
         <p className="text-slate-500 mt-1 text-lg">
-          Your AI assistant has analyzed your profile and identified new opportunities.
+          {citizenData?.isDemo 
+            ? "Your AI assistant has analyzed your profile and identified new opportunities." 
+            : "We've matched your profile with the latest government opportunities."}
         </p>
       </div>
 
       {/* Hero Widget & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <BenefitSummaryCard />
+          <BenefitSummaryCard totalBenefits={totalBenefitAmount} schemeCount={eligibleSchemes.length} />
           <QuickActions />
         </div>
         <div className="lg:col-span-4">
@@ -278,18 +347,21 @@ const DashboardHome = () => {
       {/* Secondary Row Mosaics */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-1 border-none">
-          <TopSchemesPreview />
+          <TopSchemesPreview schemes={eligibleSchemes} isDemo={citizenData?.isDemo} />
         </div>
         <div className="xl:col-span-1">
           <DocumentSnapshot />
         </div>
         <div className="xl:col-span-1">
-          <ApplicationSnapshot />
+          <ApplicationSnapshot applications={citizenData?.isDemo ? applicationSnapshot : applications} />
         </div>
       </div>
 
     </motion.div>
   );
+
 };
+
+
 
 export default DashboardHome;

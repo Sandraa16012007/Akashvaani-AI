@@ -107,35 +107,21 @@ async def upload_document(
     file: UploadFile = File(...)
 ):
     try:
+        from app.services.profile_extraction_service import process_profile_extraction
         file_bytes = await file.read()
         
-        # 1. Generate unique file name and upload to Supabase Storage
-        ext = file.filename.split('.')[-1] if '.' in file.filename else 'pdf'
-        unique_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
-        
-        file_url = await upload_document_to_storage(
-            unique_filename, 
-            file_bytes, 
-            file.content_type
+        # Use our refined extraction service
+        extracted_data = await process_profile_extraction(
+            file_bytes=file_bytes,
+            filename=file.filename,
+            content_type=file.content_type,
+            user_id=user_id
         )
         
-        # 2 & 3. Run mock OCR extraction
-        extracted_data = await run_ocr_extraction(file_bytes, file.filename)
-        
-        # 4. Save extracted data into Supabase 'documents' table
-        doc_record = {
-            "user_id": user_id,
-            "document_type": document_type,
-            "file_url": file_url,
-            "extracted_data": extracted_data
-        }
-        
-        saved_data = await store_document_extraction(doc_record)
-        
-        # Return extracted citizen profile
         return extracted_data
         
     except Exception as e:
+        print(f"Upload error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/demo-citizen")

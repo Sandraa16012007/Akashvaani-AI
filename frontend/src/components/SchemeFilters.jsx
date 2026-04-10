@@ -1,45 +1,102 @@
 import React, { useState, useEffect } from 'react';
 
-const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
+const docTypeToField = {
+  'Aadhaar Card': 'aadhaar_card',
+  'PAN Card': 'pan_card',
+  'Passport': 'passport',
+  'Voter ID': 'voter_id',
+  'Driving License': 'driving_license',
+  'Ration Card': 'ration_card',
+  'Birth Certificate': 'birth_certificate',
+  'Death Certificate': 'death_certificate',
+  'Marriage Certificate': 'marriage_certificate',
+  'Caste Status Certificate': 'caste_status_certificate',
+  'Income Certificate': 'income_certificate'
+};
+
+const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile }) => {
   const [incomeRange, setIncomeRange] = useState('');
-  const [maxBenefit, setMaxBenefit] = useState(250000);
   const [selectedDocs, setSelectedDocs] = useState([]);
+  const [genderFilter, setGenderFilter] = useState('');
   
   // Scrape distinct documents natively across array to render dynamic selects
   const allDocs = Array.from(new Set(
     schemes.flatMap(s => s.documents_required || [])
-  )).filter(Boolean).slice(0, 10);
+  )).filter(Boolean).slice(0, 15);
+
+  useEffect(() => {
+    if (userProfile) {
+      // 1. Auto-select the income bucket the user belongs to
+      const income = Number(userProfile.income);
+      if (income <= 100000) setIncomeRange('100000');
+      else if (income <= 250000) setIncomeRange('250000');
+      else if (income <= 500000) setIncomeRange('500000');
+      else if (income <= 800000) setIncomeRange('800000');
+
+      // 2. Auto-select documents they have verified in the database
+      const possessedFromDb = Object.keys(docTypeToField).filter(typeName => {
+        const fieldName = docTypeToField[typeName];
+        return userProfile[fieldName] === true;
+      });
+      setSelectedDocs(possessedFromDb);
+
+      // 3. Auto-select gender filter
+      if (userProfile.gender) {
+        setGenderFilter(userProfile.gender);
+      }
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     let result = [...schemes];
 
-    // 1. Income parsing map
-    if (incomeRange) {
+    // 1. Income parsing & Eligibility map
+    if (userProfile && userProfile.income) {
+      const uIncome = Number(userProfile.income);
+      result = result.filter(scheme => {
+        const rules = scheme.eligibility_rules;
+        if (!rules || !rules.income_max) return true;
+        return uIncome <= rules.income_max;
+      });
+    } else if (incomeRange) {
       const maxIncomeNum = parseInt(incomeRange);
       result = result.filter(scheme => {
         if (!scheme.eligibility_rules?.income_max) return true; 
-        return scheme.eligibility_rules.income_max <= maxIncomeNum;
+        return scheme.eligibility_rules.income_max >= maxIncomeNum;
       });
     }
 
-    // 2. Strict Document checking
+    // 2. Gender filtering
+    const effectiveGender = userProfile?.gender || genderFilter;
+    if (effectiveGender) {
+      result = result.filter(scheme => {
+        const rules = scheme.eligibility_rules;
+        if (!rules || !rules.gender || rules.gender.toLowerCase() === 'all') return true;
+        return rules.gender.toLowerCase() === effectiveGender.toLowerCase();
+      });
+    }
+
+    // 3. Document checking
     if (selectedDocs.length > 0) {
       result = result.filter(scheme => {
         const reqDocs = scheme.documents_required || [];
-        return selectedDocs.some(doc => reqDocs.includes(doc));
+        if (reqDocs.length === 0) return true;
+        return reqDocs.some(doc => selectedDocs.includes(doc));
       });
     }
 
-    // 3. Benefit slider logic. Parse numeric equivalents dynamically out of strings like '₹50,000/year'.
-    result = result.filter(scheme => {
-      const numStr = String(scheme.benefit).replace(/[^0-9]/g, '');
-      const val = parseInt(numStr, 10);
-      if (isNaN(val)) return true; // Ignored if the metric format differs
-      return val <= maxBenefit;
-    });
+    // 4. Student status logic (if profile present)
+    if (userProfile) {
+      const isStudent = userProfile.occupation?.toLowerCase() === 'student' || userProfile.student === true;
+      result = result.filter(scheme => {
+        const rules = scheme.eligibility_rules;
+        if (!rules || rules.student === undefined) return true;
+        return rules.student === isStudent;
+      });
+    }
 
     setFilteredSchemes(result);
-  }, [schemes, incomeRange, selectedDocs, maxBenefit, setFilteredSchemes]);
+  }, [schemes, incomeRange, selectedDocs, genderFilter, setFilteredSchemes, userProfile]);
 
   const toggleDoc = (doc) => {
     if (selectedDocs.includes(doc)) {
@@ -51,8 +108,8 @@ const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
 
   const handleReset = () => {
     setIncomeRange('');
-    setMaxBenefit(250000);
     setSelectedDocs([]);
+    setGenderFilter('');
     setFilteredSchemes(schemes);
   };
 
@@ -61,7 +118,7 @@ const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
       <div className="flex flex-col lg:flex-row gap-8">
         
         {/* Income Range Config */}
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-3 font-outfit">
           <label className="text-sm font-bold text-indian-navy uppercase tracking-widest block">Income Bound</label>
           <div className="relative">
             <select 
@@ -70,7 +127,7 @@ const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
               className="w-full bg-slate-50 border border-black/5 rounded-2xl px-5 py-4 text-sm font-semibold focus:ring-4 focus:ring-indian-saffron/10 focus:border-indian-saffron outline-none transition-all appearance-none text-indian-navy cursor-pointer"
             >
               <option value="">No Strict Income Bounds</option>
-              <option value="100000">{'Less than ₹1,000,000/yr'}</option>
+              <option value="100000">{'Less than ₹100,000/yr'}</option>
               <option value="250000">{'Less than ₹250,000/yr'}</option>
               <option value="500000">{'Less than ₹500,000/yr'}</option>
               <option value="800000">{'Less than ₹800,000/yr'}</option>
@@ -81,31 +138,28 @@ const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
           </div>
         </div>
 
-        {/* Benefits Range */}
-        <div className="flex-1 space-y-3">
-          <div className="flex justify-between items-center text-sm font-bold text-indian-navy uppercase tracking-widest">
-            <label>Max Benefit Size</label>
-            <span className="text-white bg-indian-saffron px-3 py-1 rounded-lg font-black tracking-widest shadow-sm">₹{maxBenefit.toLocaleString()}</span>
-          </div>
-          <div className="pt-2">
-            <input 
-                type="range" 
-                min="10000" 
-                max="250000" 
-                step="10000"
-                value={maxBenefit} 
-                onChange={(e) => setMaxBenefit(Number(e.target.value))}
-                className="w-full h-2.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indian-saffron transition-all focus:outline-none focus:ring-4 focus:ring-indian-saffron/20"
-            />
-          </div>
-          <div className="flex justify-between text-xs text-indian-navy/40 font-bold px-1">
-            <span>₹10K</span>
-            <span>₹250K+</span>
+        {/* Gender Filter Config */}
+        <div className="flex-1 space-y-3 font-outfit">
+          <label className="text-sm font-bold text-indian-navy uppercase tracking-widest block">Gender Basis</label>
+          <div className="relative">
+            <select 
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="w-full bg-slate-50 border border-black/5 rounded-2xl px-5 py-4 text-sm font-semibold focus:ring-4 focus:ring-indian-saffron/10 focus:border-indian-saffron outline-none transition-all appearance-none text-indian-navy cursor-pointer"
+            >
+              <option value="">Show All Genders</option>
+              <option value="male">Male Specific</option>
+              <option value="female">Female Specific</option>
+              <option value="non_binary">Non-Binary Specific</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-indian-navy/40">
+               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
           </div>
         </div>
 
         {/* Documents Toggles */}
-        <div className="flex-[1.5] space-y-3">
+        <div className="flex-[2] space-y-3 font-outfit">
            <label className="text-sm font-bold text-indian-navy uppercase tracking-widest block mb-3">Possessed Documents</label>
            <div className="flex flex-wrap gap-2">
               {allDocs.map(doc => (
@@ -122,7 +176,7 @@ const SchemeFilters = ({ schemes, setFilteredSchemes }) => {
                   {doc}
                 </button>
               ))}
-              {allDocs.length === 0 && <span className="text-sm text-indian-navy/40 italic py-2">Loading documents index...</span>}
+              {allDocs.length === 0 && <span className="text-sm text-indian-navy/40 italic py-2">Scanning schemas for requirements...</span>}
            </div>
         </div>
 

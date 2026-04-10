@@ -26,6 +26,18 @@ async def store_document_extraction(document_data: dict):
     response = await client.table("documents").insert(document_data).execute()
     return response.data
 
+async def fetch_document_url_by_type(user_id: str, doc_type: str):
+    """Fetches the latest file URL for a specific document type from history."""
+    client = await get_supabase()
+    response = await client.table("documents") \
+        .select("file_url") \
+        .eq("user_id", user_id) \
+        .eq("document_type", doc_type) \
+        .order("created_at", desc=True) \
+        .limit(1) \
+        .execute()
+    return response.data[0]["file_url"] if response.data else None
+
 async def create_user(user_data: dict):
     """Creates a citizen user."""
     client = await get_supabase()
@@ -37,6 +49,12 @@ async def fetch_user_by_id(user_id: str):
     client = await get_supabase()
     response = await client.table("users").select("*").eq("id", user_id).execute()
     return response.data[0] if response.data else None
+
+async def update_user(user_id: str, user_data: dict):
+    """Updates an existing citizen user."""
+    client = await get_supabase()
+    response = await client.table("users").update(user_data).eq("id", user_id).execute()
+    return response.data
 
 
 async def create_application(application_data: dict):
@@ -56,7 +74,12 @@ async def upload_document_to_storage(file_name: str, file_bytes: bytes, content_
         file_options={"content-type": content_type}
     )
     
-    # For supabase-py async client get_public_url returns a string synchronously
-    public_url = client.storage.from_("documents").get_public_url(file_name)
+    # For supabase-py async client get_public_url returns a coroutine
+    public_url_res = await client.storage.from_("documents").get_public_url(file_name)
+    # get_public_url in some versions returns a dict/object or just the string. 
+    # Usually it returns the string directly if awaited in newer async versions, 
+    # but let's be safe.
+    public_url = public_url_res
     return public_url
+
 

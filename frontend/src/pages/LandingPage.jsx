@@ -48,7 +48,7 @@ const LandingPage = ({ onLoginSuccess, onGetStartedSuccess, onDemoLogin }) => {
       <Navbar 
         onLoginClick={() => setIsLoginOpen(true)} 
         onGetStartedClick={() => setIsOnboardingOpen(true)} 
-        onDemoLogin={onDemoLogin}
+        onDemoLogin={handleRunDemo}
       />
       <main>
         <Hero onGetStartedClick={() => setIsOnboardingOpen(true)} />
@@ -100,12 +100,12 @@ const LandingPage = ({ onLoginSuccess, onGetStartedSuccess, onDemoLogin }) => {
       <LoginModal 
         isOpen={isLoginOpen} 
         onClose={() => setIsLoginOpen(false)} 
-        onSuccess={onLoginSuccess} 
+        onSuccess={() => { setIsLoginOpen(false); navigate('/dashboard'); }} 
       />
       <OnboardingModal 
         isOpen={isOnboardingOpen} 
         onClose={() => setIsOnboardingOpen(false)} 
-        onSuccess={onGetStartedSuccess} 
+        onSuccess={() => { setIsOnboardingOpen(false); navigate('/dashboard'); }} 
       />
     </div>
   );
