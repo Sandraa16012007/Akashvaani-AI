@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe } from 'lucide-react';
 import logo from '../assets/logo.png';
 
-const Navbar = ({ onLoginClick, onGetStartedClick }) => {
+const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [lang, setLang] = useState('English');
   const [showLang, setShowLang] = useState(false);
@@ -89,8 +89,15 @@ const Navbar = ({ onLoginClick, onGetStartedClick }) => {
           </div>
 
           <button 
+            onClick={onDemoLogin}
+            className="hidden xl:block text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-4 py-2 rounded-full transition-colors"
+          >
+            Try Demo User
+          </button>
+          
+          <button 
             onClick={onLoginClick}
-            className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors"
+            className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors ml-2"
           >
             Login
           </button>

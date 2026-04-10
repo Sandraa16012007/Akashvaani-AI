@@ -58,7 +58,7 @@ const OnboardingModal = ({ isOpen, onClose, onSuccess }) => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-5"
+            className="grid grid-cols-1 md:grid-cols-2 gap-3"
           >
             <InputField icon={<User />} label="Full Name" placeholder="Rajesh Kumar" />
             <InputField icon={<Mail />} label="Email Address" placeholder="rajesh@example.com" type="email" />
@@ -163,7 +163,7 @@ const InputField = ({ icon, label, placeholder, type = "text" }) => (
       <input 
         type={type}
         placeholder={placeholder}
-        className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white border border-black/5 focus:border-indian-saffron outline-none transition-all font-medium text-sm text-indian-navy placeholder:text-slate-300"
+        className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-black/5 focus:border-indian-saffron outline-none transition-all font-medium text-sm text-indian-navy placeholder:text-slate-300"
       />
     </div>
   </div>

@@ -13,7 +13,7 @@ import LoginModal from '../components/modals/LoginModal';
 import OnboardingModal from '../components/modals/OnboardingModal';
 import { runDemo } from '../services/api';
 
-const LandingPage = ({ onLoginSuccess, onGetStartedSuccess }) => {
+const LandingPage = ({ onLoginSuccess, onGetStartedSuccess, onDemoLogin }) => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -39,6 +39,7 @@ const LandingPage = ({ onLoginSuccess, onGetStartedSuccess }) => {
       <Navbar 
         onLoginClick={() => setIsLoginOpen(true)} 
         onGetStartedClick={() => setIsOnboardingOpen(true)} 
+        onDemoLogin={onDemoLogin}
       />
       <main>
         <Hero onGetStartedClick={() => setIsOnboardingOpen(true)} />
