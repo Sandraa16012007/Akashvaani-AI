@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uuid
 import re
-from .db.supabase_client import (
+from app.db.supabase_client import (
     fetch_schemes,
     create_application,
     store_document_extraction,
@@ -11,9 +11,9 @@ from .db.supabase_client import (
     create_user,
     fetch_user_by_id
 )
-from .services.ocr_service import run_ocr_extraction
-from .services.eligibility_engine import analyze_eligibility
-from .routes.extraction_routes import router as extraction_router
+from app.services.ocr_service import run_ocr_extraction
+from app.services.eligibility_engine import analyze_eligibility
+from app.routes.extraction_routes import router as extraction_router
 
 app = FastAPI(title="Akashvaani AI Service")
 

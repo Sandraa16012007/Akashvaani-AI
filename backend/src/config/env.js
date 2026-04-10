@@ -3,7 +3,7 @@ require('dotenv').config();
 const port = process.env.PORT || 5000;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // Validate required variables
 const requiredFields = { supabaseUrl, supabaseKey };

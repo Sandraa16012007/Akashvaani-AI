@@ -1,7 +1,7 @@
 import uuid
-from ..utils.ocr import extract_text_from_document
-from ..agents.profile_extraction_agent import extract_citizen_profile
-from ..db.supabase_client import upload_document_to_storage, store_document_extraction
+from app.utils.ocr import extract_text_from_document
+from app.agents.profile_extraction_agent import extract_citizen_profile
+from app.db.supabase_client import upload_document_to_storage, store_document_extraction
 
 async def process_profile_extraction(file_bytes: bytes, filename: str, content_type: str, user_id: str = "demo_user"):
     """
