@@ -31,3 +31,19 @@ async def create_application(application_data: dict):
     client = await get_supabase()
     response = await client.table("applications").insert(application_data).execute()
     return response.data
+
+async def upload_document_to_storage(file_name: str, file_bytes: bytes, content_type: str) -> str:
+    """Uploads a file to Supabase Storage 'documents' bucket and returns the public URL."""
+    client = await get_supabase()
+    
+    # Upload to storage
+    await client.storage.from_("documents").upload(
+        path=file_name,
+        file=file_bytes,
+        file_options={"content-type": content_type}
+    )
+    
+    # For supabase-py async client get_public_url returns a string synchronously
+    public_url = client.storage.from_("documents").get_public_url(file_name)
+    return public_url
+
