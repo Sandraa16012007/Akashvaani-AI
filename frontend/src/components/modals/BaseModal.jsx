@@ -38,10 +38,10 @@ const BaseModal = ({ isOpen, onClose, children, title, subtitle, size = 'md' }) 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full ${sizeClasses[size]} bg-[#FAF9F6] rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/40 flex flex-col max-h-[90vh]`}
+            className={`relative w-full ${sizeClasses[size]} bg-[#FAF9F6] rounded-[2.5rem] shadow-2xl border border-white/40 flex flex-col`}
           >
-            {/* Header */}
-            <div className="p-8 pb-0 flex justify-between items-start relative z-10">
+            {/* Header */ }
+            <div className="p-6 pb-0 flex justify-between items-start relative z-10">
               <div>
                 <h2 className="text-3xl font-bold text-indian-navy tracking-tight">{title}</h2>
                 {subtitle && <p className="text-slate-500 mt-2 font-medium">{subtitle}</p>}
@@ -54,8 +54,8 @@ const BaseModal = ({ isOpen, onClose, children, title, subtitle, size = 'md' }) 
               </button>
             </div>
 
-            {/* Content - Scrollable if needed, but designed not to be as per request */}
-            <div className="p-8 pt-6 overflow-y-auto custom-scrollbar">
+            {/* Content Designed not to be scrollable as per request */}
+            <div className="p-6 pt-4">
               {children}
             </div>
           </motion.div>
