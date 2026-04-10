@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 
-const Navbar = () => {
+const Navbar = ({ onLoginClick, onGetStartedClick, onDemoLogin }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [lang, setLang] = useState('English');
   const [showLang, setShowLang] = useState(false);
@@ -17,9 +18,9 @@ const Navbar = () => {
   }, []);
 
   const menuItems = [
-    { name: 'Home', href: '#' },
-    { name: 'About', href: '#about' },
-    { name: 'Government Schemes', href: '#schemes' },
+    { name: 'Home', href: '/' },
+    { name: 'About', href: '/#about' },
+    { name: 'Schemes', href: '/schemes' },
   ];
 
   return (
@@ -41,14 +42,14 @@ const Navbar = () => {
         {/* Menu */}
         <div className="hidden lg:flex items-center gap-10">
           {menuItems.map((item) => (
-            <a
+            <Link
               key={item.name}
-              href={item.href}
+              to={item.href}
               className="text-md font-semibold text-indian-navy/70 hover:text-indian-saffron transition-colors relative group"
             >
               {item.name}
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indian-saffron transition-all group-hover:w-full"></span>
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -88,11 +89,24 @@ const Navbar = () => {
             </AnimatePresence>
           </div>
 
-          <button className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors">
+          <button 
+            onClick={onDemoLogin}
+            className="hidden xl:block text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-4 py-2 rounded-full transition-colors"
+          >
+            Try Demo User
+          </button>
+          
+          <button 
+            onClick={onLoginClick}
+            className="hidden sm:block text-sm font-bold text-indian-navy/60 hover:text-indian-navy transition-colors ml-2"
+          >
             Login
           </button>
           
-          <button className="btn-primary !py-2.5 !px-6 text-sm flex items-center gap-2 group">
+          <button 
+            onClick={onGetStartedClick}
+            className="btn-primary !py-2.5 !px-6 text-sm flex items-center gap-2 group"
+          >
             Get Started
             <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1">
               <ChevronDown className="-rotate-90 w-3 h-3" />

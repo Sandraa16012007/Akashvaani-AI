@@ -1,17 +1,16 @@
 import asyncio
+from ..utils.ocr import extract_text_from_document
 
 async def run_ocr_extraction(file_bytes: bytes, file_name: str) -> dict:
     """
-    Mock OCR extraction function.
-    In a real scenario, this would integrate with Tesseract, Google Cloud Vision, etc.
+    Wrapper for the new OCR utility. 
+    Returns a basic dict to maintain compatibility with existing main.py logic.
     """
-    # Simulate external API processing time
-    await asyncio.sleep(1)
+    text = extract_text_from_document(file_bytes, file_name)
     
-    # Mock extracted fields
+    # Return a structure similar to what the mock returned previously
     return {
-        "name": "Arjun Kumar",
-        "age": 34,
-        "state": "Maharashtra",
-        "occupation": "Farmer"
+        "raw_text": text,
+        "name": "Extracted from OCR",
+        "status": "Success"
     }
