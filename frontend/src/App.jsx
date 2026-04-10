@@ -7,6 +7,7 @@ import ProcessSteps from './components/ProcessSteps';
 import Testimonials from './components/Testimonials';
 import AdvocateSection from './components/AdvocateSection';
 import ContactSection from './components/ContactSection';
+import ReasoningTimeline from './components/ReasoningTimeline';
 import Footer from './components/Footer';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <IntelligenceSection />
         <ProcessSteps />
         <Testimonials />
+        <ReasoningTimeline />
         <AdvocateSection />
         <ContactSection />
       </main>

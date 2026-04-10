@@ -116,3 +116,16 @@ async def demo_citizen():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/agents/reasoning/{user_id}")
+async def get_agent_reasoning(user_id: str):
+    """
+    Returns step-by-step reasoning for the eligibility AI agent.
+    """
+    return [
+        "Parsing citizen profile",
+        "Fetching schemes from database",
+        "Analyzing eligibility rules",
+        "Calculating benefit totals",
+        "Generating application drafts"
+    ]
+
