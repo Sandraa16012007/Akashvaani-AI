@@ -26,6 +26,13 @@ async def store_document_extraction(document_data: dict):
     response = await client.table("documents").insert(document_data).execute()
     return response.data
 
+async def create_user(user_data: dict):
+    """Creates a citizen user."""
+    client = await get_supabase()
+    response = await client.table("users").insert(user_data).execute()
+    return response.data
+
+
 async def create_application(application_data: dict):
     """Creates a new draft application."""
     client = await get_supabase()

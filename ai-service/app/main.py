@@ -1,12 +1,15 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 import uuid
+import re
 from .db.supabase_client import (
     fetch_schemes,
     create_application,
     store_document_extraction,
-    upload_document_to_storage
+    upload_document_to_storage,
+    create_user
 )
 from .services.ocr_service import run_ocr_extraction
+from .services.eligibility_engine import analyze_eligibility
 
 app = FastAPI(title="Akashvaani AI Service")
 
@@ -75,3 +78,41 @@ async def upload_document(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/demo-citizen")
+async def demo_citizen():
+    citizen_data = {
+        "name": "Ravi Kumar",
+        "age": 19,
+        "occupation": "Student",
+        "student": True,
+        "income": 200000,
+        "state": "Uttar Pradesh",
+        "education": "BTech"
+    }
+    
+    try:
+        # 1. Insert demo user
+        user_record = await create_user(citizen_data)
+        citizen_profile = user_record[0] if user_record else citizen_data
+        
+        # 2. Run eligibility engine
+        eligible_schemes = await analyze_eligibility(citizen_profile)
+        
+        # 3. Calculate total benefit amount
+        total_benefit = 0
+        for scheme in eligible_schemes:
+            benefit_str = str(scheme.get("benefit", ""))
+            # Extract numbers from benefit strings like "₹50,000 per year"
+            digits = re.sub(r'[^\d]', '', benefit_str)
+            if digits:
+                total_benefit += int(digits)
+                
+        return {
+            "citizen_profile": citizen_profile,
+            "eligible_schemes": eligible_schemes,
+            "total_benefit_amount": f"₹{total_benefit:,}" if total_benefit > 0 else "N/A"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
