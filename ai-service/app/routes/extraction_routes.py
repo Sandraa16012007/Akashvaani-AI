@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from ..services.profile_extraction_service import process_profile_extraction
+from app.services.profile_extraction_service import process_profile_extraction
 
 router = APIRouter(prefix="/ai", tags=["Extraction"])
 
