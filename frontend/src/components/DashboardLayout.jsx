@@ -63,8 +63,6 @@ const DashboardLayout = ({ userProfile, onLogout }) => {
     { to: "/dashboard/applications", icon: FileText, label: "Applications" },
     { to: "/dashboard/documents", icon: FolderOpen, label: "Documents" },
     { to: "/dashboard/voice-assistant", icon: Mic, label: "Voice Assistant" },
-    { to: "/schemes", icon: Globe, label: "Government Schemes" },
-    { to: "/dashboard/settings", icon: Settings, label: "Settings" }
   ];
 
   return (
