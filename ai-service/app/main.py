@@ -14,6 +14,7 @@ from app.db.supabase_client import (
 from app.services.ocr_service import run_ocr_extraction
 from app.services.eligibility_engine import analyze_eligibility
 from app.routes.extraction_routes import router as extraction_router
+from app.voice_agent.routes import router as voice_router
 
 app = FastAPI(title="Akashvaani AI Service")
 
@@ -31,6 +32,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(extraction_router)
+app.include_router(voice_router)
 
 # AI Service Endpoints (Called by Node.js Backend)
 @app.post("/ai/eligibility")
