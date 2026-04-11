@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createApplication } from '../services/api';
+import { useCitizen } from '../context/CitizenContext';
+import { Loader2, CheckCircle } from 'lucide-react';
 
 const evaluateEligibility = (scheme, profile) => {
   if (!profile) return { status: 'Unknown', color: 'bg-slate-100 text-indian-navy/60 border-black/5' };
@@ -28,9 +32,46 @@ const evaluateEligibility = (scheme, profile) => {
 
 
 const SchemeCard = ({ scheme, citizenProfile }) => {
-  const { scheme_name, description, benefit, eligibility_rules, documents_required } = scheme;
+  const navigate = useNavigate();
+  const { citizenData } = useCitizen();
+  const [isApplying, setIsApplying] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
+  
+  const { scheme_name, description, benefit, eligibility_rules, documents_required, id } = scheme;
   
   const eligibility = evaluateEligibility(scheme, citizenProfile);
+
+  const handleApply = async () => {
+    if (isApplied || isApplying) return;
+    
+    setIsApplying(true);
+    try {
+      const userId = citizenData?.profile?.id;
+      if (!userId) {
+        alert("Please log in to apply for schemes.");
+        return;
+      }
+
+      await createApplication({
+        user_id: userId,
+        scheme_id: id,
+        status: 'Submitted'
+      });
+
+      setIsApplied(true);
+      
+      // Short delay before redirection
+      setTimeout(() => {
+        navigate('/dashboard/applications');
+      }, 1500);
+      
+    } catch (err) {
+      console.error('Application failed:', err);
+      alert("Application failed. Please try again.");
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-black/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full group relative">
@@ -96,8 +137,30 @@ const SchemeCard = ({ scheme, citizenProfile }) => {
       </div>
       
       <div className="mt-auto pt-5 border-t border-black/5">
-        <button className="w-full py-3.5 text-center bg-indian-saffron/10 hover:bg-indian-saffron text-indian-saffron hover:text-white font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm shadow-sm group-hover:shadow-md">
-          Apply
+        <button 
+          onClick={handleApply}
+          disabled={isApplied || isApplying}
+          className={`w-full py-3.5 flex items-center justify-center gap-2 text-center font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm shadow-sm ${
+            isApplied 
+              ? 'bg-green-600 text-white shadow-green-200' 
+              : isApplying
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-indian-saffron/10 hover:bg-indian-saffron text-indian-saffron hover:text-white group-hover:shadow-md'
+          }`}
+        >
+          {isApplied ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Applied
+            </>
+          ) : isApplying ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Applying...
+            </>
+          ) : (
+            'Apply'
+          )}
         </button>
       </div>
     </div>

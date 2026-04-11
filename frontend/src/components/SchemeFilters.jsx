@@ -62,36 +62,50 @@ const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile, search = '' }
   useEffect(() => {
     let result = [...schemes];
 
-    // 1. Income filter (auto from profile, fallback to dropdown selection)
+    // 1. Initial Search/Keyword filtering (takes precedence if provided via props/AI)
+    let searchMatches = [];
+    if (search) {
+      const s = search.toLowerCase();
+      searchMatches = schemes.filter(scheme => 
+        scheme.scheme_name?.toLowerCase().includes(s) ||
+        scheme.description?.toLowerCase().includes(s) ||
+        scheme.state?.toLowerCase().includes(s)
+      );
+    }
+
+    // 2. Profile-based Filtering
+    let profileFiltered = [...schemes];
+    
+    // Income filter
     const effectiveIncome = userProfile?.income ? Number(userProfile.income) : null;
     if (effectiveIncome) {
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         const rules = scheme.eligibility_rules;
         if (!rules || !rules.income_max) return true;
         return effectiveIncome <= rules.income_max;
       });
     } else if (incomeRange) {
       const maxIncomeNum = parseInt(incomeRange);
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         if (!scheme.eligibility_rules?.income_max) return true;
         return scheme.eligibility_rules.income_max >= maxIncomeNum;
       });
     }
 
-    // 2. Gender filter (handles string OR array in DB)
+    // Gender filter
     const effectiveGender = userProfile?.gender || genderFilter;
     if (effectiveGender) {
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         const rules = scheme.eligibility_rules;
         if (!rules || !rules.gender) return true;
         return genderMatches(rules.gender, effectiveGender);
       });
     }
 
-    // 3. Age filter using min_age (new schema key)
+    // Age filter 
     if (userProfile?.age) {
       const age = Number(userProfile.age);
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         const rules = scheme.eligibility_rules;
         if (!rules) return true;
         if (rules.min_age && age < rules.min_age) return false;
@@ -101,28 +115,23 @@ const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile, search = '' }
       });
     }
 
-    // 4. Occupation-based filtering
+    // Occupation-based filtering
     if (userProfile?.occupation) {
       const occ = userProfile.occupation.toLowerCase();
       const isStudent = occ === 'student';
-      const isFarmer = occ === 'farmer';
-      const isFisherman = occ === 'fisherman';
-      const isVendor = occ === 'vendor';
 
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         const rules = scheme.eligibility_rules;
         if (!rules) return true;
-        // student rule
         if (rules.student !== undefined && rules.student !== isStudent) return false;
-        // occupation rule
         if (rules.occupation && rules.occupation.toLowerCase() !== occ) return false;
         return true;
       });
     }
 
-    // 5. Document checking (fuzzy match: "Aadhaar Card" matches "Aadhaar" in DB)
+    // Document checking
     if (selectedDocs.length > 0) {
-      result = result.filter(scheme => {
+      profileFiltered = profileFiltered.filter(scheme => {
         const reqDocs = scheme.documents_required || [];
         if (reqDocs.length === 0) return true;
         return reqDocs.some(reqDoc =>
@@ -135,16 +144,13 @@ const SchemeFilters = ({ schemes, setFilteredSchemes, userProfile, search = '' }
       });
     }
 
-    // 6. Search/Keyword filtering
+    // Combine: If search exists, we show schemes that match search. 
+    // If no search, we show profile filtered.
+    // If both exist, we show search matches, BUT we could prioritize them.
     if (search) {
-      const s = search.toLowerCase();
-      result = result.filter(scheme => {
-        return (
-          scheme.name?.toLowerCase().includes(s) ||
-          scheme.description?.toLowerCase().includes(s) ||
-          scheme.category?.toLowerCase().includes(s)
-        );
-      });
+      result = searchMatches;
+    } else {
+      result = profileFiltered;
     }
 
     setFilteredSchemes(result);
