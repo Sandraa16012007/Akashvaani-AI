@@ -1,7 +1,9 @@
 import os
 import logging
+import asyncio
 from dotenv import load_dotenv
 import google.generativeai as genai
+from app.db.supabase_client import fetch_schemes
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -20,20 +22,16 @@ model = None
 def get_model():
     global model
     if model is None:
-        model = genai.GenerativeModel("gemini-3-flash-preview")
+        model = genai.GenerativeModel("gemini-2.5-flash")
     return model
 
-
-SYSTEM_PROMPT = """You are Akash AI, a smart and friendly government scheme assistant for Indian citizens.
+SYSTEM_PROMPT_BASE = """You are Akash AI, a smart and friendly government scheme assistant for Indian citizens.
 You are part of the Akashvaani AI platform.
 
-The user may ask about:
-- Government scheme eligibility (central & state schemes)
-- Required documents for schemes
-- Application status of their submissions
-- Navigation help inside the app (e.g., "take me to my documents")
-- General questions about government benefits
-- Finding specific types of schemes (e.g., "scholarships", "farming")
+THE CORE RULE:
+- You ONLY know about and can ONLY recommend schemes from the "AVAILABLE SCHEMES FROM DATABASE" list provided below.
+- If a user asks about a scheme NOT in that list, you MUST politely state that you only have information on specific documented schemes and offer to show them the full list.
+- NEVER invent or hallucinate scheme names, benefits, or eligibility rules.
 
 LANGUAGE RULES:
 1. If the user speaks in Hindi OR Hinglish (mixed Hindi/English), you MUST respond in pure Hindi text.
@@ -42,38 +40,48 @@ LANGUAGE RULES:
 
 BEHAVIOR RULES:
 1. Be concise, helpful, and proactive.
-2. When asked about schemes, first provide a summarized bulleted list of matching schemes in the `reply`.
-3. Inform the user that they can click the button below to see the full list of matched schemes.
-4. Set the `route` field if you want to suggest a page for the user to visit (e.g., filtered schemes).
+2. When a matching scheme is found, provide its name and a brief summary in the `reply`.
+3. Inform the user they can click the button below to view the scheme details on the Schemes Page.
+4. Set the `route` field for navigation: /dashboard/schemes?search=SchemeName (Use the exact name from the database list).
 
 OUTPUT FORMAT:
-You MUST return your response as valid JSON with this exact structure:
+Return ONLY a valid JSON object:
 
 {
-  "reply": "Your natural language response here (in Hindi if input was Hindi/Hinglish).",
+  "reply": "Your natural language response (Hindi if input was Hindi/Hinglish).",
   "intent": "navigate OR answer",
-  "route": "/dashboard/schemes?search=keyword OR /dashboard/applications OR null",
+  "route": "/dashboard/schemes?search=ExactSchemeName OR null",
   "response_language": "hi OR en"
-}
+}"""
 
-IMPORTANT: Return ONLY the JSON object. No extra text, no markdown code fences."""
+async def get_schemes_context():
+    """Fetches schemes and formats them for the prompt context."""
+    try:
+        schemes = await fetch_schemes()
+        if not schemes:
+            return "No schemes currently available in the database."
+        
+        context = "AVAILABLE SCHEMES FROM DATABASE:\n"
+        for s in schemes:
+            context += f"- {s.get('scheme_name')} (Category: {s.get('state', 'Central')}): {s.get('description')[:150]}...\n"
+        return context
+    except Exception as e:
+        logger.error(f"Error fetching schemes for context: {e}")
+        return "Error fetching database schemes. Proceed with general knowledge but prioritize navigation to /dashboard/schemes."
 
-
-def generate_response(user_text: str, language: str = "en") -> str:
+async def generate_response(user_text: str, language: str = "en") -> str:
     """
     Send user query to Gemini and get a structured response.
-
-    Args:
-        user_text: The user's query (transcribed or typed)
-        language: Detected language code ('hi', 'en', etc.)
-
-    Returns:
-        Raw string response from Gemini (should be JSON)
     """
     try:
-        language_name = "Hindi" if language == "hi" else "English"
+        # Fetch schemes context as needed
+        schemes_context = await get_schemes_context()
+
+        language_name = "Hindi/Hinglish" if language == "hi" else "English"
         
-        prompt = f"""{SYSTEM_PROMPT}
+        full_system_prompt = f"{SYSTEM_PROMPT_BASE}\n\n{schemes_context}"
+        
+        prompt = f"""{full_system_prompt}
 
 User's detected language: {language_name}
 User Query: {user_text}"""
@@ -82,16 +90,28 @@ User Query: {user_text}"""
         response = model.generate_content(prompt)
         result = response.text.strip()
 
+        # Pre-process JSON to ensure URL encoding in the route
+        try:
+            import json
+            import urllib.parse
+            data = json.loads(result)
+            if data.get("route") and "?search=" in data["route"]:
+                base, query = data["route"].split("?search=", 1)
+                data["route"] = f"{base}?search={urllib.parse.quote(query)}"
+                result = json.dumps(data)
+        except Exception as pe:
+            logger.warning(f"Could not post-process route encoding: {pe}")
+
         logger.info(f"Gemini response received ({len(result)} chars)")
         return result
 
     except Exception as e:
         logger.error(f"Gemini API call failed: {e}")
-        # Return a fallback response as valid JSON
+        import json
         fallback = {
             "reply": "I'm sorry, I couldn't process your request right now. Please try again.",
             "intent": "answer",
-            "route": None
+            "route": None,
+            "response_language": "en"
         }
-        import json
         return json.dumps(fallback)

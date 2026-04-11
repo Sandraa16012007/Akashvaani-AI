@@ -51,7 +51,7 @@ async def voice_query(
 
         # 3. Get Gemini response
         logger.info(f"Generating Gemini response for text: '{final_text}' in language: {stt_result['language']}")
-        llm_output = generate_response(
+        llm_output = await generate_response(
             final_text,
             stt_result["language"]
         )
@@ -92,7 +92,7 @@ async def text_query(request: TextQueryRequest):
 
         # Skip Whisper, go directly to Gemini
         logger.info(f"Received text query: '{request.text}'")
-        llm_output = generate_response(
+        llm_output = await generate_response(
             request.text,
             request.language
         )

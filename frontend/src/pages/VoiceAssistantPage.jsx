@@ -361,15 +361,18 @@ const VoiceAssistantPage = () => {
              >
                <Mic className="w-5 h-5" />
              </button>
-             <input 
-               type="text" 
-               value={message}
-               onChange={(e) => setMessage(e.target.value)}
-               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-               placeholder={isRecording ? 'Listening... click mic to stop' : 'Ask me about schemes, eligibility, or applications...'}
-               disabled={isProcessing || isRecording}
-               className="w-full py-4 pl-14 pr-16 bg-transparent border-none outline-none text-slate-700 font-medium placeholder:text-slate-400 disabled:cursor-not-allowed"
-             />
+              <input 
+                type="text" 
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder={isRecording ? 'Listening... click mic to stop' : 'Ask me about schemes, eligibility, or applications...'}
+                disabled={isProcessing} // Allow typing OR seeing transcription even when recording (readonly achieved by isRecording)
+                readOnly={isRecording}
+                className={`w-full py-4 pl-14 pr-16 bg-transparent border-none outline-none font-medium placeholder:text-slate-400 disabled:cursor-not-allowed transition-all ${
+                  isRecording ? 'text-blue-600' : 'text-slate-700'
+                }`}
+              />
              <button 
                 onClick={() => handleSend()}
                 disabled={!message.trim() || isProcessing || isRecording}
