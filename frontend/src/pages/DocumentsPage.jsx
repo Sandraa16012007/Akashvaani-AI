@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, CheckCircle2, AlertCircle, File, Loader2, ExternalLink } from 'lucide-react';
 import { useCitizen } from '../context/CitizenContext';
 import { extractProfile, fetchDocumentUrl } from '../services/aiApi';
-import { updateUser } from '../services/api';
+import { updateUser, getUserById } from '../services/api';
 
 const DocumentCard = ({ doc }) => {
   const { addDocument, citizenData, updateCitizen } = useCitizen();
@@ -94,14 +94,17 @@ const DocumentCard = ({ doc }) => {
         updateCitizen(cleanUpdates);
       }
 
-      // 5. Explicitly write the doc boolean flag and user details to DB as a guaranteed save
-      if (citizenData?.profile?.id) {
+      // 5. Explicitly write the doc boolean flag to DB as a guaranteed save
+      if (flagField && citizenData?.profile?.id) {
         try {
-          const dbPayload = { ...cleanUpdates };
-          if (flagField) dbPayload[flagField] = true;
-          await updateUser(citizenData.profile.id, dbPayload);
+          await updateUser(citizenData.profile.id, { [flagField]: true });
+          // 6. Re-fetch the full user record from DB to sync context
+          const freshUser = await getUserById(citizenData.profile.id);
+          if (freshUser) {
+            updateCitizen(freshUser);
+          }
         } catch (dbErr) {
-          console.error('DB update failed:', dbErr);
+          console.error('DB flag update failed:', dbErr);
         }
       }
 
