@@ -1,5 +1,13 @@
+import os
+import sys
 import whisper
 import logging
+
+# Ensure ffmpeg (installed via winget) is on PATH for this process.
+# The conda environment does not automatically inherit the WinGet Links directory.
+_WINGET_LINKS = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Links")
+if _WINGET_LINKS and os.path.isdir(_WINGET_LINKS) and _WINGET_LINKS not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = _WINGET_LINKS + os.pathsep + os.environ.get("PATH", "")
 
 logger = logging.getLogger(__name__)
 
